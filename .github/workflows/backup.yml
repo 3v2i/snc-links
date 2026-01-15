@@ -32,34 +32,40 @@ jobs:
           EXPEDIENTE="232781"
           ANHO="2025"
 
-          URL="https://www.catastro.gov.py/expediente-electronico/api/public/consultas-publicas/movimiento-expediente?filters=%7B%22anho%22:${ANHO},%22numeroExpediente%22:${EXPEDIENTE}%7D"
+          URLS=(
+          "https://www.catastro.gov.py/expediente-electronico/api/public/consultas-publicas/cuenta-corriente?filters=%7B%22pisoNivel%22:%2200%22,%22dptoSalon%22:%22000%22,%22zona%22:27,%22manzana%22:3297,%22lote%22:12,%22idDepartamento%22:%22L%22,%22idCiudad%22:7%7D"
+          "https://www.catastro.gov.py/expediente-electronico/api/public/consultas-publicas/expediente?filters=%7B%22anho%22:${ANHO},%22numeroExpediente%22:${EXPEDIENTE}%7D"
+          "https://www.catastro.gov.py/expediente-electronico/api/public/consultas-publicas/movimiento-expediente?filters=%7B%22anho%22:${ANHO},%22numeroExpediente%22:${EXPEDIENTE}%7D"
+          )
 
-          SNAPSHOT="work/expediente-${EXPEDIENTE}-${DATE}.json"
-          LATEST="work/expediente-${EXPEDIENTE}.json"
+          echo "[]" > work/manifest.json
 
-          curl -fsSL "$URL" -o "$SNAPSHOT"
-          cp "$SNAPSHOT" "$LATEST"
+          for url in "${URLS[@]}"; do
+          id=$(echo "$url" | sed -n 's/.*publicas\/\([^?]*\).*/\1/p')
+          file="work/$id.json"
 
-          sha256=$(sha256sum "$SNAPSHOT" | awk '{print $1}')
+            curl -fsSL "$url" -o "$file"
 
-          jq -n \
-            --arg expediente "$EXPEDIENTE" \
-            --arg anho "$ANHO" \
-            --arg url "$URL" \
-            --arg snapshot "$(basename "$SNAPSHOT")" \
-            --arg latest "$(basename "$LATEST")" \
-            --arg sha "$sha256" \
-            --arg timestamp "$TS" \
+            sha256=$(sha256sum "$file" | awk '{print $1}')
+
+            jq \
+              --arg id "$id" \
+              --arg url "$url" \
+              --arg expediente "$EXPEDIENTE" \
+              --arg anho "$ANHO" \
+              --arg sha "$sha256" \
+              --arg timestamp "$TS"
             '{
-              expediente: $expediente,
-              anho: $anho,
+              id: $id,
+              expediente: $EXPEDIENTE,
+              anho: $ANHO,
               url: $url,
-              snapshot: $snapshot,
-              latest: $latest,
               sha256: $sha,
               fetched_at: $timestamp
-            }' > work/manifest.json
+            }' >> work/manifest.json
 
+          done
+                    
       - name: Import GPG key
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -79,7 +85,6 @@ jobs:
             Backup automático del expediente electrónico (Catastro).
 
             - Snapshot diario con nombre fechado
-            - Alias estable `latest.json`
             - Hash SHA-256 del snapshot
             - Manifest firmado con clave GPG
 
