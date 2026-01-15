@@ -61,7 +61,7 @@ jobs:
               anho: $ANHO,
               url: $url,
               sha256: $sha,
-              fetched_at: $timestamp
+              timestamp: $timestamp
             }' >> work/manifest.json
 
           done
