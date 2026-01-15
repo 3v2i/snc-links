@@ -79,16 +79,13 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: expediente-${{ env.DATE }}
-          name: Expediente 232781 – Backup ${{ env.DATE }}
+          tag_name: backup-${{ env.DATE }}
+          name: Backup SATI ${{ env.DATE }}
           body: |
-            Backup automático del expediente electrónico (Catastro).
-
-            - Snapshot diario con nombre fechado
-            - Hash SHA-256 del snapshot
-            - Manifest firmado con clave GPG
-
-            Fecha UTC: ${{ env.TS }}
+            Backup automático diario de documentos públicos SNC.
+            Resolución DNS forzada a Cloudflare (1.1.1.1).
+            Manifest firmado con clave técnica.
           files: |
-            work/*.json
+            work/*.pdf
+            work/manifest.json
             work/manifest.json.asc
