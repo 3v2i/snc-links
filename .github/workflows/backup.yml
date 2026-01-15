@@ -33,16 +33,16 @@ jobs:
           ANHO="2025"
 
           URLS=(
-          "https://www.catastro.gov.py/expediente-electronico/api/public/consultas-publicas/cuenta-corriente?filters=%7B%22pisoNivel%22:%2200%22,%22dptoSalon%22:%22000%22,%22zona%22:27,%22manzana%22:3297,%22lote%22:12,%22idDepartamento%22:%22L%22,%22idCiudad%22:7%7D"
-          "https://www.catastro.gov.py/expediente-electronico/api/public/consultas-publicas/expediente?filters=%7B%22anho%22:${ANHO},%22numeroExpediente%22:${EXPEDIENTE}%7D"
-          "https://www.catastro.gov.py/expediente-electronico/api/public/consultas-publicas/movimiento-expediente?filters=%7B%22anho%22:${ANHO},%22numeroExpediente%22:${EXPEDIENTE}%7D"
+            "https://www.catastro.gov.py/expediente-electronico/api/public/consultas-publicas/cuenta-corriente?filters=%7B%22pisoNivel%22:%2200%22,%22dptoSalon%22:%22000%22,%22zona%22:27,%22manzana%22:3297,%22lote%22:12,%22idDepartamento%22:%22L%22,%22idCiudad%22:7%7D"
+            "https://www.catastro.gov.py/expediente-electronico/api/public/consultas-publicas/expediente?filters=%7B%22anho%22:${ANHO},%22numeroExpediente%22:${EXPEDIENTE}%7D"
+            "https://www.catastro.gov.py/expediente-electronico/api/public/consultas-publicas/movimiento-expediente?filters=%7B%22anho%22:${ANHO},%22numeroExpediente%22:${EXPEDIENTE}%7D"
           )
 
           echo "[]" > work/manifest.json
 
           for url in "${URLS[@]}"; do
-          id=$(echo "$url" | sed -n 's/.*publicas\/\([^?]*\).*/\1/p')
-          file="work/$id.json"
+            id=$(echo "$url" | sed -n 's/.*consultas-publicas\/\([^?]*\).*/\1/p')
+            file="work/$id.json"
 
             curl -fsSL "$url" -o "$file"
 
@@ -54,18 +54,20 @@ jobs:
               --arg expediente "$EXPEDIENTE" \
               --arg anho "$ANHO" \
               --arg sha "$sha256" \
-              --arg timestamp "$TS"
-            '{
-              id: $id,
-              expediente: $EXPEDIENTE,
-              anho: $ANHO,
-              url: $url,
-              sha256: $sha,
-              TS: $timestamp
-            }' >> work/manifest.json
+              --arg timestamp "$TS" \
+              '. += [{
+                id: $id,
+                expediente: $expediente,
+                anho: $anho,
+                url: $url,
+                sha256: $sha,
+                timestamp_utc: $timestamp
+              }]' \
+              work/manifest.json > work/tmp.json
 
+            mv work/tmp.json work/manifest.json
           done
-                    
+
       - name: Import GPG key
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -80,12 +82,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: backup-${{ env.DATE }}
-          name: Backup SATI ${{ env.DATE }}
+          name: Catastro expediente backup ${{ env.DATE }}
           body: |
-            Backup automático diario de documentos públicos SNC.
+            Backup automático diario de APIs públicas del Catastro.
+            Expediente: 232781 / Año: 2025
             Resolución DNS forzada a Cloudflare (1.1.1.1).
-            Manifest firmado con clave técnica.
+            Manifest JSON firmado con clave técnica GPG.
           files: |
-            work/*.pdf
-            work/manifest.json
+            work/*.json
             work/manifest.json.asc
